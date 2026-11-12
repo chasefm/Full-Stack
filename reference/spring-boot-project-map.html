@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>速查表 · Spring Boot 项目全景图</title>
+<link rel="stylesheet" href="../assets/course.css">
+<style>
+  body { font-size: 14.5px; }
+  h2 { margin-top: 1.8em; }
+  .mini-flow { font-family: var(--mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Spring Boot 项目全景图</h1>
+  <div class="lesson-meta">速查表 · 随课程更新 · 来自 <a href="../lessons/0001-spring-boot-project-anatomy.html">课程 0001</a></div>
+
+  <h2>分层结构</h2>
+<pre><code>src/main/java/com/company/project/
+├── controller/   接收 HTTP 请求，返回 JSON（入口层）
+├── service/      业务逻辑（核心层）
+├── mapper/       MyBatis-Plus 数据库读写（数据层）
+└── entity/       数据表结构（一个类 ↔ 一张表）</code></pre>
+
+  <div class="mini-flow">Controller → Service → Mapper → MySQL（数据原路返回，自动转 JSON）</div>
+
+  <h2>注解速查</h2>
+  <table>
+    <tr><th>注解</th><th>作用</th></tr>
+    <tr><td><code>@RestController</code></td><td>宣告 HTTP 接口类</td></tr>
+    <tr><td><code>@Service</code></td><td>宣告业务类，注册进 Spring 容器</td></tr>
+    <tr><td><code>@Mapper</code></td><td>宣告 MyBatis-Plus 数据访问接口</td></tr>
+    <tr><td><code>@Autowired</code></td><td>依赖注入：容器自动装配实例</td></tr>
+    <tr><td><code>@GetMapping("/path/{id}")</code></td><td>GET 路由绑定；同族：<code>@PostMapping</code> 新增、<code>@PutMapping</code> 改、<code>@DeleteMapping</code> 删</td></tr>
+    <tr><td><code>@PathVariable</code></td><td>取 URL 里的 <code>{id}</code></td></tr>
+    <tr><td><code>@RequestBody</code></td><td>把请求 JSON 反序列化成对象（POST body）</td></tr>
+  </table>
+
+  <h2>MyBatis-Plus 白送的 CRUD</h2>
+<pre><code>interface UserMapper extends BaseMapper&lt;User&gt;
+selectById(id)        // 按主键查
+selectList(wrapper)   // 按条件查列表
+insert(user)          // 插入
+updateById(user)      // 按主键更新
+deleteById(id)        // 按主键删除</code></pre>
+
+  <h2>新增一个接口的改动清单</h2>
+  <table>
+    <tr><th>#</th><th>动作</th><th>位置</th></tr>
+    <tr><td>1</td><td>加路由方法 + 参数解析</td><td>controller/XxxController.java</td></tr>
+    <tr><td>2</td><td>写业务方法</td><td>service/XxxService.java</td></tr>
+    <tr><td>3</td><td>需要新查询时才写</td><td>mapper/XxxMapper.java</td></tr>
+    <tr><td>4</td><td>表结构变了才改</td><td>entity/Xxx.java</td></tr>
+  </table>
+
+  <footer>遇到表中没覆盖的场景，直接在对话里问导师。&nbsp;<a href="../lessons/0001-spring-boot-project-anatomy.html">← 返回课程 0001</a></footer>
+</div>
+</body>
+</html>

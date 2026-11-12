@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "划词翻译 (English → 中文)",
+  "version": "1.0.0",
+  "description": "按住 Ctrl 并框选英文即可翻译。DeepSeek 大模型优先，额度不足自动降级到免费引擎。",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://api.deepseek.com/*",
+    "https://open.bigmodel.cn/*",
+    "https://www.bing.com/*",
+    "https://api.mymemory.translated.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*", "file://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

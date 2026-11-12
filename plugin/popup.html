@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: #1f2328;
+      padding: 14px;
+      box-sizing: border-box;
+    }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    label { display: block; font-size: 12px; color: #656d76; margin: 12px 0 4px; }
+    input, select {
+      width: 100%; box-sizing: border-box;
+      padding: 6px 8px; border: 1px solid #d0d7de; border-radius: 6px;
+      font-size: 13px; background: #fff;
+    }
+    .row { display: flex; gap: 8px; margin-top: 4px; }
+    button {
+      flex: none; padding: 6px 14px; border: 0; border-radius: 6px;
+      background: #1f6feb; color: #fff; font-size: 13px; cursor: pointer;
+    }
+    button.ghost { background: #f0f2f4; color: #1f2328; }
+    button:hover { filter: brightness(.94); }
+    #status { font-size: 12px; color: #1a7f37; margin-top: 8px; min-height: 18px; }
+    #result {
+      margin-top: 10px; padding: 8px 10px; border-radius: 6px;
+      background: #f6f8fa; font-size: 13px; word-break: break-word;
+      white-space: pre-wrap;
+    }
+    #result:empty { display: none; }
+    #result.err { color: #c01c28; }
+    .tip { font-size: 11px; color: #8c959f; margin: 10px 0 0; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>划词翻译 设置</h2>
+
+  <label>LLM 服务商</label>
+  <select id="provider">
+    <option value="deepseek">DeepSeek</option>
+    <option value="glm">智谱 GLM</option>
+  </select>
+
+  <label id="deepseekKeyLabel">DeepSeek API Key</label>
+  <input type="password" id="deepseekKey" placeholder="sk-..." autocomplete="off">
+
+  <label id="glmKeyLabel">智谱 GLM API Key</label>
+  <input type="password" id="glmKey" placeholder="api key（bigmodel.cn 获取）" autocomplete="off">
+
+  <label>翻译引擎</label>
+  <select id="engine">
+    <option value="auto">自动降级（LLM 优先，失败用免费引擎）</option>
+    <option value="llm">仅所选 LLM</option>
+    <option value="free">仅免费引擎（Bing）</option>
+  </select>
+
+  <label>触发方式</label>
+  <select id="trigger">
+    <option value="ctrl">Ctrl + 框选（默认）</option>
+    <option value="auto">直接框选即弹出</option>
+  </select>
+
+  <div class="row" style="margin-top:14px">
+    <button id="save">保存</button>
+    <button id="test" class="ghost">测试翻译</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="result"></div>
+
+  <p class="tip">获取 Key：DeepSeek → platform.deepseek.com；GLM → open.bigmodel.cn（控制台 API Keys）。未填所选服务商的 Key 时将直接使用免费引擎。</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

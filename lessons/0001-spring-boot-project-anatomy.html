@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0001 · Spring Boot 单体项目解剖</title>
+<link rel="stylesheet" href="../assets/course.css">
+<style>
+  .quiz { margin: 1.2em 0; }
+  .quiz .q-body { margin: 0 0 12px; font-weight: 600; }
+  .opts { display: grid; gap: 8px; }
+  .opt {
+    font: 15px var(--sans);
+    color: var(--text);
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .opt:hover { border-color: var(--brand); }
+  .opt.right { border-color: var(--ok); background: var(--brand-soft); }
+  .opt.wrong { border-color: var(--err); opacity: 0.75; }
+  .opt[disabled] { cursor: default; }
+  .explain { display: none; margin-top: 10px; font-size: 14px; color: var(--text-2); border-left: 3px solid var(--border); padding-left: 12px; }
+  .explain.show { display: block; }
+
+  .order-pool { display: grid; gap: 8px; margin: 12px 0; }
+  .order-item {
+    font: 14.5px var(--sans);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text);
+  }
+  .order-item:hover { border-color: var(--brand); }
+  .order-item.picked { opacity: 0.35; cursor: default; border-style: dashed; }
+  .order-item.picked::before { content: "✓ 第 " attr(data-seq) " 步 · "; color: var(--ok); font-weight: 600; }
+  .order-result { display: none; margin-top: 8px; font-size: 14px; }
+  .order-result.show { display: block; }
+  .order-result.good { color: var(--ok); }
+  .order-result.bad { color: var(--err); }
+
+  .recall-q { position: relative; }
+  .recall-answer { display: none; margin-top: 8px; }
+  .recall-answer.show { display: block; }
+  .reveal-btn { font: 600 13px var(--sans); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; color: var(--text-2); cursor: pointer; }
+  .reveal-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  .flow-svg text { font: 12px var(--sans); }
+  .flow-svg .box { fill: var(--surface); stroke: var(--border); }
+  .flow-svg .hit { stroke: var(--brand); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Spring Boot 单体项目解剖</h1>
+  <div class="lesson-meta">课程 0001 · 阶段 0 生存周 · 约 15 分钟 · <a href="../reference/spring-boot-project-map.html">配套速查表</a></div>
+
+  <div class="callout">
+    <span class="label">本课的胜利</span>
+    下周你拿到第一个后端小需求时，能准确说出：这个需求要动哪几个目录的代码、一个请求进来之后会流经哪几层。不需要会写，只需要<strong>看懂地图</strong>。
+  </div>
+
+  <h2>你已经知道一半了</h2>
+  <p>你写过 React + TS，天天和 HTTP 打交道。Spring Boot 对你来说不是全新的世界，只是换了语言的同一套后端常识：</p>
+  <table>
+    <tr><th>你熟悉的</th><th>Spring Boot 里对应</th></tr>
+    <tr><td>Express / Next.js 的 API 路由 handler</td><td><code>Controller</code></td></tr>
+    <tr><td>前端业务逻辑模块 / hooks</td><td><code>Service</code></td></tr>
+    <tr><td>TS 的 interface（描述数据形状）</td><td><code>Entity</code></td></tr>
+    <tr><td>fetch 调的 <code>/api/users</code></td><td><code>@GetMapping("/api/users")</code></td></tr>
+  </table>
+
+  <h2>项目结构：一张地图</h2>
+  <p>公司这种 Spring Boot 单体项目，代码几乎都长这一个模样：</p>
+<pre><code>src/main/java/com/company/project/
+├── controller/      ← 入口层：接收 HTTP 请求，返回 JSON
+│   └── UserController.java
+├── service/         ← 业务层：干活的核心逻辑在这里
+│   └── UserService.java
+├── mapper/          ← 数据层：MyBatis-Plus 负责读写数据库
+│   └── UserMapper.java
+└── entity/          ← 数据表结构：一个类对应一张表
+    └── User.java</code></pre>
+  <div class="callout">
+    <span class="label">记忆口诀</span>
+    请求从 <strong>controller（接待）</strong>进，交给 <strong>service（干活）</strong>，需要数据就找 <strong>mapper（取货）</strong>，货物的形状由 <strong>entity（图纸）</strong>定义。
+  </div>
+
+  <h2>一个请求的旅程</h2>
+  <p>以浏览器请求 <code>GET /api/users/1</code> 为例，它在你公司的项目里会这样流动：</p>
+
+  <svg class="flow-svg" viewBox="0 0 660 218" width="100%" role="img" aria-label="请求流程图">
+    <defs>
+      <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+        <path d="M1 1 L7 4 L1 7 Z" fill="var(--text-3)"/>
+      </marker>
+    </defs>
+    <rect class="box" x="10" y="20" width="100" height="46" rx="8"/>
+    <text x="60" y="40" text-anchor="middle">浏览器</text>
+    <text x="60" y="56" text-anchor="middle" fill="var(--text-3)" font-size="11">GET /api/users/1</text>
+    <rect class="box hit" x="140" y="20" width="110" height="46" rx="8"/>
+    <text x="195" y="40" text-anchor="middle">① Controller</text>
+    <text x="195" y="56" text-anchor="middle" fill="var(--text-3)" font-size="11">接住请求，解析参数</text>
+    <rect class="box hit" x="290" y="20" width="110" height="46" rx="8"/>
+    <text x="345" y="40" text-anchor="middle">② Service</text>
+    <text x="345" y="56" text-anchor="middle" fill="var(--text-3)" font-size="11">执行业务逻辑</text>
+    <rect class="box hit" x="440" y="20" width="110" height="46" rx="8"/>
+    <text x="495" y="40" text-anchor="middle">③ Mapper</text>
+    <text x="495" y="56" text-anchor="middle" fill="var(--text-3)" font-size="11">生成 SQL 查库</text>
+    <rect class="box" x="570" y="20" width="80" height="46" rx="8"/>
+    <text x="610" y="40" text-anchor="middle">MySQL</text>
+    <text x="610" y="56" text-anchor="middle" fill="var(--text-3)" font-size="11">返回一行数据</text>
+
+    <line x1="110" y1="43" x2="136" y2="43" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <line x1="250" y1="43" x2="286" y2="43" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <line x1="400" y1="43" x2="436" y2="43" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <line x1="550" y1="43" x2="566" y2="43" stroke="var(--text-3)" marker-end="url(#arr)"/>
+
+    <rect class="box" x="140" y="120" width="110" height="46" rx="8"/>
+    <text x="195" y="140" text-anchor="middle">User 对象</text>
+    <text x="195" y="156" text-anchor="middle" fill="var(--text-3)" font-size="11">数据原路装车返回</text>
+    <line x1="495" y1="66" x2="495" y2="96" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <line x1="495" y1="96" x2="195" y2="96" stroke="var(--text-3)"/>
+    <line x1="195" y1="96" x2="195" y2="116" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <line x1="195" y1="166" x2="60" y2="166" stroke="var(--text-3)"/>
+    <line x1="60" y1="166" x2="60" y2="70" stroke="var(--text-3)" marker-end="url(#arr)"/>
+    <text x="330" y="190" text-anchor="middle" fill="var(--text-3)">④ Spring 自动把 User 对象变成 JSON 返回给浏览器 —— 你在 React 里 fetch 到的就是它</text>
+  </svg>
+
+  <h2>注解四件套：每个文件顶上那几个 @</h2>
+  <p>Java 没有你熟悉的 <code>export</code> / 路由注册，取而代之的是<strong>注解</strong>——贴在类或方法上的标签，Spring 启动时扫描它们并自动装配：</p>
+  <table>
+    <tr><th>注解</th><th>作用</th><th>前端人话</th></tr>
+    <tr><td><code>@RestController</code></td><td>宣告：这个类负责 HTTP 接口</td><td>“我是一个路由模块”</td></tr>
+    <tr><td><code>@GetMapping("/api/users/{id}")</code></td><td>把 URL + GET 方法绑定到下面的函数</td><td>“GET 这个路径走我这个 handler”</td></tr>
+    <tr><td><code>@Service</code></td><td>宣告：这是业务逻辑类，注册进容器</td><td>“我是可复用的业务模块”</td></tr>
+    <tr><td><code>@Autowired</code></td><td>Spring 自动把依赖塞进来，不用手动 new</td><td>“别自己 new，容器给你注入”（类似全局的依赖注入）</td></tr>
+  </table>
+
+  <h2>MyBatis-Plus：Mapper 为什么这么薄</h2>
+  <p>Mapper 接口里通常<strong>一行方法都不用写</strong>——继承 <code>BaseMapper&lt;User&gt;</code> 就白拿全套 CRUD：</p>
+<pre><code>@Mapper
+public interface UserMapper extends BaseMapper&lt;User&gt; {
+    // selectById / selectList / insert / updateById / deleteById 全部免费
+}</code></pre>
+  <p>Mapper 把方法翻译成 SQL：<code>selectById(1)</code> → <code>SELECT * FROM user WHERE id = 1</code>。这就是“中小公司 Java 项目”的标配打法，也是你面试八股的主战场之一。</p>
+
+  <h2>练习场</h2>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 1 · 一个请求从进到出，请按顺序点击下面的卡片</p>
+    <div class="order-pool" data-order data-correct="0,1,2,3,4,5">
+      <button class="order-item" data-i="0">Controller 接住请求并解析参数</button>
+      <button class="order-item" data-i="1">Service 执行业务逻辑</button>
+      <button class="order-item" data-i="2">Mapper 生成 SQL 查数据库</button>
+      <button class="order-item" data-i="3">MySQL 返回一行数据</button>
+      <button class="order-item" data-i="4">数据原路装回 User 对象</button>
+      <button class="order-item" data-i="5">Spring 把对象序列化成 JSON 返回</button>
+    </div>
+    <p class="order-result" data-result></p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 2 · 需求来了：「新增一个根据邮箱查用户的接口」，代码主要要动哪三层？</p>
+    <div class="opts" data-mcq data-answer="0">
+      <button class="opt">Controller、Service、Mapper</button>
+      <button class="opt">Controller、Entity、前端</button>
+      <button class="opt">Service、Mapper、启动类</button>
+      <button class="opt">前端、Controller、配置</button>
+    </div>
+    <p class="explain">解析：入口要加路由方法（Controller）、查询逻辑要写（Service）、数据查询要实现（Mapper）。Entity 只有表结构变了才动，前端接口是你最擅长的部分。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 3 · <code>@Autowired</code> 做的事，最准确的描述是？</p>
+    <div class="opts" data-mcq data-answer="0">
+      <button class="opt">容器自动装配依赖实例</button>
+      <button class="opt">编译期自动生成新的类</button>
+      <button class="opt">方法变更时自动触发执行</button>
+      <button class="opt">启动时自动创建数据表格</button>
+    </div>
+    <p class="explain">解析：@Autowired = 依赖注入。你不用 <code>new UserService()</code>，Spring 容器启动时已经把所有带 @Service 的类实例化好，谁需要就自动塞给谁。这是 Spring 最核心的思想（IoC），阶段 2 会深挖。</p>
+  </div>
+
+  <h2>凭回忆作答（不看上文）</h2>
+  <p style="font-size:14px;color:var(--text-3)">检索练习是记忆真正的来源——先在心里答完，再点开核对。</p>
+
+  <div class="card recall-q">
+    <p><strong>Q1</strong>：一个请求依次流经哪三层？每层的职责是什么？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">Controller 接住请求、解析参数 → Service 执行业务逻辑 → Mapper 读写数据库。数据原路返回，Spring 自动序列化成 JSON。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q2</strong>：接一个新接口需求，代码应该往哪些目录里放？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">controller/ 加路由方法，service/ 加业务方法，mapper/ 视情况加查询方法（BaseMapper 白送的可能就够用了）。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q3</strong>：MyBatis-Plus 的 BaseMapper 免费送你哪些常用方法？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">selectById、selectList、insert、updateById、deleteById 等全套单表 CRUD，不用写 SQL。</p>
+  </div>
+
+  <h2>主资源 · 课后小任务</h2>
+  <p>今天只推荐一个：<a href="https://spring.io/guides/gs/spring-boot" target="_blank">Spring 官方指南：Building an Application with Spring Boot</a>——15 分钟跟读一遍，你会有“原来如此”的感觉。</p>
+  <div class="callout">
+    <span class="label">实战任务（很重要）</span>
+    打开你公司的项目，各找一个 controller、service、mapper 文件，再挑一个接口，把<strong>请求从 Controller 到 Mapper 的完整调用链</strong>人工走一遍。把卡住的地方贴回来问我——你的疑问就是下一课的素材。
+  </div>
+
+  <footer>
+    卡住了？随时回来问你的导师（AI 助手），把报错、代码片段或疑问直接贴进对话即可。<br>
+    下一课预告 · 0002：Java 语法速通——用 TS 对比法，10 个概念搞定生存所需。<br>
+    <a href="../reference/spring-boot-project-map.html">→ 打印版速查表：Spring Boot 项目全景图</a>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  document.querySelectorAll('[data-mcq]').forEach((quiz) => {
+    const opts = [...quiz.querySelectorAll('.opt')];
+    const explain = quiz.querySelector('.explain');
+    const answer = Number(quiz.dataset.answer);
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach((o) => { o.disabled = true; });
+        opts[answer].classList.add('right');
+        if (i !== answer) opt.classList.add('wrong');
+        else explain.style.borderColor = 'var(--ok)';
+        explain.classList.add('show');
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-order]').forEach((pool) => {
+    const items = [...pool.querySelectorAll('.order-item')];
+    const result = pool.parentElement.querySelector('[data-result]');
+    const order = [];
+    items.forEach((item) => {
+      item.addEventListener('click', () => {
+        if (item.classList.contains('picked')) return;
+        order.push(Number(item.dataset.i));
+        item.dataset.seq = order.length;
+        item.classList.add('picked');
+        if (order.length === items.length) {
+          const correct = pool.dataset.correct.split(',').map(Number);
+          const good = order.every((v, idx) => v === correct[idx]);
+          result.textContent = good
+            ? '✓ 全对！这条链路你已经刻进脑子了。'
+            : `顺序有误：正确是 Controller → Service → Mapper → MySQL → 对象装回 → JSON 返回。你刚才走的是第 ${order.map((v) => items[v].textContent).join(' → ')}`;
+          result.classList.add(good ? 'good' : 'bad');
+          result.classList.add('show');
+        }
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-reveal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const answer = btn.parentElement.querySelector('.recall-answer');
+      answer.classList.toggle('show');
+      btn.textContent = answer.classList.contains('show') ? '收起答案' : '显示答案';
+    });
+  });
+})();
+</script>
+</body>
+</html>
