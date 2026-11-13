@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0002 · 开发环境搭建</title>
+<link rel="stylesheet" href="../assets/course.css">
+<style>
+  .quiz { margin: 1.2em 0; }
+  .quiz .q-body { margin: 0 0 12px; font-weight: 600; }
+  .opts { display: grid; gap: 8px; }
+  .opt {
+    font: 15px var(--sans);
+    color: var(--text);
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .opt:hover { border-color: var(--brand); }
+  .opt.right { border-color: var(--ok); background: var(--brand-soft); }
+  .opt.wrong { border-color: var(--err); opacity: 0.75; }
+  .opt[disabled] { cursor: default; }
+  .explain { display: none; margin-top: 10px; font-size: 14px; color: var(--text-2); border-left: 3px solid var(--border); padding-left: 12px; }
+  .explain.show { display: block; }
+
+  .recall-q { position: relative; }
+  .recall-answer { display: none; margin-top: 8px; }
+  .recall-answer.show { display: block; }
+  .reveal-btn { font: 600 13px var(--sans); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; color: var(--text-2); cursor: pointer; }
+  .reveal-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  .checklist { list-style: none; padding-left: 0; margin: 1em 0; }
+  .checklist li { padding: 6px 0 6px 30px; position: relative; }
+  .checklist li::before {
+    content: "";
+    position: absolute; left: 0; top: 12px;
+    width: 16px; height: 16px;
+    border: 2px solid var(--text-3); border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>开发环境搭建：今晚一次配平</h1>
+  <div class="lesson-meta">课程 0002 · 第二周 · 约 20 分钟阅读 + 40 分钟动手 · 下一课：<a href="./0003-java-syntax-sprint.html">Java 语法速通</a></div>
+
+  <div class="callout">
+    <span class="label">本课的胜利</span>
+    今晚结束时：IDEA 里跑起你的第一个 Java 程序，MySQL 里建好第一张表。环境配平之后，第二周剩下的时间<strong>全部用来写代码</strong>。
+  </div>
+
+  <h2>装什么、为什么、按什么顺序</h2>
+  <p>四个东西，但只需手动装三个——Maven 被 IDEA 内置了：</p>
+  <table>
+    <tr><th>要装的</th><th>它是什么</th><th>前端世界的对应物</th><th>顺序</th></tr>
+    <tr><td><strong>JDK 17</strong></td><td>Java 编译器 + 运行时</td><td>Node.js 之于 JavaScript</td><td>①</td></tr>
+    <tr><td><strong>IDEA Community</strong></td><td>Java 编辑器（JetBrains 家）</td><td>VS Code，但 Java 工具链开箱即用</td><td>②</td></tr>
+    <tr><td><strong>MySQL 8</strong></td><td>数据库，公司栈同款</td><td>你熟的 MySQL 本身</td><td>③</td></tr>
+    <tr><td>Maven</td><td>依赖管理 + 构建工具</td><td>npm + 构建脚本合体</td><td>不用装，IDEA 自带</td></tr>
+  </table>
+  <div class="callout">
+    <span class="label">为什么是 IDEA 而不是 Trae</span>
+    Trae 不用卸载、继续当你的 AI 助手 + 前端工具。但 Java 练习和公司代码用 IDEA：Spring Boot 支持、Lombok 插件、断点调试、公司的 run configuration 都以 IDEA 为准。两个可以同时开。
+  </div>
+
+  <h2>安装步骤（Windows）</h2>
+
+  <h3>① JDK 17 —— 最省事的做法</h3>
+  <p>不要去官网手动下载再配环境变量，让 IDEA 代劳：装好 IDEA 后，<code>New Project</code> → <code>JDK</code> 下拉框 → <code>Download JDK</code> → 版本选 <strong>17</strong>、厂商选 <strong>Temurin (Eclipse Adoptium)</strong> → Download。IDEA 会自动下载并配好。</p>
+  <p>如果偏好手动装：去 <a href="https://adoptium.net/" target="_blank">adoptium.net</a> 下载 Temurin 17 的 Windows <code>.msi</code>，一路下一步即可（默认会配好 PATH）。</p>
+
+  <h3>② IDEA Community</h3>
+  <p><a href="https://www.jetbrains.com/idea/download/" target="_blank">jetbrains.com/idea/download</a> → 页面往下滚，找 <strong>Community Edition</strong>（免费，页面上默认推的是收费的 Ultimate，别装错）。安装时勾选「Add "bin" folder to the PATH」和 <code>.java</code> 文件关联。</p>
+
+  <h3>③ MySQL 8</h3>
+  <p><a href="https://dev.mysql.com/downloads/installer/" target="_blank">dev.mysql.com/downloads/installer</a> → 下载体积大的离线版（mysql-installer-community）。安装要点：</p>
+  <div class="checklist">
+    <li>Setup Type 选 <strong>Server only</strong>（Workbench 等工具你不需要，用 IDEA 或命令行连库就够）</li>
+    <li>配置一路默认（端口 3306）</li>
+    <li>设置 root 密码——<strong>用你不会忘的密码并记下来</strong>，0004 课配置数据源时要填它</li>
+    <li>装完在开始菜单搜「MySQL 8.0 Command Line Client」能打开、输密码能进入 <code>mysql&gt;</code> 提示符，即成功</li>
+  </div>
+
+  <h2>验收三连（今晚的动手作业）</h2>
+
+  <h3>① 跑起第一个 Java 程序</h3>
+  <p>IDEA → <code>New Project</code>（名字随意，如 <code>hello-java</code>，JDK 选刚下载的 17）→ 在 <code>src</code> 下新建类 <code>Main</code>，敲入：</p>
+<pre><code>public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, Java");
+    }
+}</code></pre>
+  <p>别手打——这是你的第一个 IDEA 加速 buff：<code>main</code> 里输入 <code>psvm</code> 按 Tab，自动展开 main 方法；输入 <code>sout</code> 按 Tab，自动展开打印语句。点 <code>main</code> 方法旁边的绿色 ▶ 运行，控制台看到输出即过关。</p>
+  <p>顺便感受一下类型声明：前端 <code>let msg = "hi"</code>，Java 是 <code>String msg = "hi";</code>——<strong>类型在前，语句带分号</strong>，语法速通课（0003）会系统讲。</p>
+
+  <h3>② MySQL 建库建表</h3>
+  <p>打开 MySQL 命令行客户端，逐条执行：</p>
+<pre><code>CREATE DATABASE demo DEFAULT CHARACTER SET utf8mb4;
+USE demo;
+
+CREATE TABLE book (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title      VARCHAR(100) NOT NULL,
+    author     VARCHAR(50)  NOT NULL,
+    status     TINYINT      NOT NULL DEFAULT 1 COMMENT '1上架 0下架',
+    created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO book (title, author) VALUES ('深入理解Java虚拟机', '周志明');
+SELECT * FROM book;</code></pre>
+  <p>看到一行查询结果，即过关。这张 <code>book</code> 表就是 0004 动手课的主角，先替未来的自己铺路。</p>
+
+  <h3>③（可选）终端验证</h3>
+  <p>PowerShell 里执行 <code>java -version</code>，看到 <code>17.x.x</code> 即 JDK 配好了。看不到也没关系——IDEA 内部用自己的 JDK 路径，0004 课全部在 IDEA 里完成。</p>
+
+  <h2>课后大作业：打开公司项目</h2>
+  <div class="callout">
+    <span class="label">实战任务（本周最重要的一步）</span>
+    IDEA → <code>File → Open</code> → 选公司项目根目录（<strong>有 pom.xml 的那一层</strong>）→ Trust Project → 等右下角 Maven 索引进度条跑完（第一次要几分钟）。然后对照 <a href="../reference/spring-boot-project-map.html">0001 的项目地图</a>，把 controller / service / mapper / entity 四个目录各点开一个文件看一眼。
+  </div>
+  <p>大概率遇到两件事，都有解：</p>
+  <table>
+    <tr><th>现象</th><th>解法</th></tr>
+    <tr><td>代码大面积红色，Lombok 的 <code>@Data</code> 报「cannot find symbol」</td><td><code>Settings → Plugins</code> 装 Lombok 插件（新版 IDEA 自带，确认启用）；<code>Settings → Build → Compiler → Annotation Processors</code> 勾选 <strong>Enable annotation processing</strong></td></tr>
+    <tr><td>项目 JDK 版本不对（比如公司是 JDK 8）</td><td>见下面的「多 JDK 共存备查」；同时打开项目根目录的 <code>pom.xml</code>，搜 <code>&lt;java.version&gt;</code>，一眼确认公司的 JDK 版本</td></tr>
+  </table>
+
+  <h2>多 JDK 共存备查（公司是 JDK 8 时用）</h2>
+  <p>IDEA 的每个项目可以独立选 SDK，互不影响：<code>File → Project Structure → Project</code> → SDK 下拉框 → <code>Add SDK → Download JDK</code> → 选 8。你本机的 JDK 17 和 8 可以共存，练习项目用 17，公司项目用 8，切换只在项目设置里改一下。</p>
+  <div class="callout">
+    <span class="label">小知识</span>
+    Spring Boot 3 要求 JDK 17+，Spring Boot 2 通常跑在 JDK 8 上。所以「公司的 JDK 版本」基本等于「公司是 Boot 2 还是 3」，这个信息值得汇报给我——影响后面部分代码写法（比如配置文件格式）。
+  </div>
+
+  <h2>练习场</h2>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 1 · Maven 大致相当于前端的什么？</p>
+    <div class="opts" data-mcq data-answer="0">
+      <button class="opt">npm：依赖管理 + 构建脚本</button>
+      <button class="opt">React：UI 框架</button>
+      <button class="opt">Node.js：运行时</button>
+      <button class="opt">Vite：开发服务器</button>
+    </div>
+    <p class="explain">解析：Maven 读 <code>pom.xml</code>（对应 package.json）来下载依赖（对应 node_modules 自动生成）、编译打包项目。IDEA 内置了它，所以你不用单独装。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 2 · JDK 和 JRE 的关系，哪个说法对？</p>
+    <div class="opts" data-mcq data-answer="1">
+      <button class="opt">JRE 包含 JDK，装 JRE 就够开发</button>
+      <button class="opt">JDK 包含 JRE + 编译器等开发工具，开发要装 JDK</button>
+      <button class="opt">两个完全独立，都要装</button>
+      <button class="opt">JDK 只是 IDEA 的一个插件</button>
+    </div>
+    <p class="explain">解析：JDK = JRE（运行时）+ javac（编译器）+ 调试工具等。类比：只跑 JS 装 Node 就行，但要「开发」就还需要工具链——Java 的这个开发包就叫 JDK。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 3 · 打开公司项目后 Lombok 注解大面积报红，第一步该干什么？</p>
+    <div class="opts" data-mcq data-answer="2">
+      <button class="opt">删掉 Lombok 依赖，手写 getter/setter</button>
+      <button class="opt">重装 IDEA</button>
+      <button class="opt">确认 Lombok 插件启用 + 打开 Annotation Processors 开关</button>
+      <button class="opt">把 pom.xml 里的 Lombok 版本改成最新</button>
+    </div>
+    <p class="explain">解析：Lombok 是编译期生成代码的插件，IDEA 需要两样东西配合：识别注解的插件（新版内置）+ 编译时开启注解处理器。99% 的「Lombok 报红」都是第二个开关没开。</p>
+  </div>
+
+  <h2>凭回忆作答（不看上文）</h2>
+  <p style="font-size:14px;color:var(--text-3)">检索练习是记忆真正的来源——先在心里答完，再点开核对。</p>
+
+  <div class="card recall-q">
+    <p><strong>Q1</strong>：让 IDEA 帮你下载 JDK 的具体路径是什么？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">New Project → JDK 下拉框 → Download JDK → 选 17 + Temurin。不用手动配环境变量。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q2</strong>：打开公司项目要选哪一层目录？打开后要等什么跑完？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">选有 pom.xml 的项目根目录；等右下角 Maven 索引进度条跑完再开始看代码。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q3</strong>：怎么确认公司项目用的 JDK 版本？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">打开 pom.xml，找 &lt;java.version&gt; 标签。Boot 3 对应 JDK 17+，Boot 2 通常 JDK 8。</p>
+  </div>
+
+  <h2>主资源 · 课后小任务</h2>
+  <p>今天只推荐一个：<a href="https://www.jetbrains.com/help/idea/creating-and-running-your-first-java-application.html" target="_blank">IDEA 官方文档：创建并运行你的第一个 Java 应用</a>——和今晚作业呼应，遇到细节卡壳时查它。</p>
+
+  <footer>
+    卡住了？随时回来问你的导师（AI 助手），把报错截图或文字直接贴进对话即可。<br>
+    下一课预告 · 0003：Java 语法速通——写给 TS 开发者，一晚读懂公司项目代码。<br>
+    <a href="./0001-spring-boot-project-anatomy.html">← 复习 0001：Spring Boot 项目解剖</a>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  document.querySelectorAll('[data-mcq]').forEach((quiz) => {
+    const opts = [...quiz.querySelectorAll('.opt')];
+    const explain = quiz.querySelector('.explain');
+    const answer = Number(quiz.dataset.answer);
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach((o) => { o.disabled = true; });
+        opts[answer].classList.add('right');
+        if (i !== answer) opt.classList.add('wrong');
+        else explain.style.borderColor = 'var(--ok)';
+        explain.classList.add('show');
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-reveal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const answer = btn.parentElement.querySelector('.recall-answer');
+      answer.classList.toggle('show');
+      btn.textContent = answer.classList.contains('show') ? '收起答案' : '显示答案';
+    });
+  });
+})();
+</script>
+</body>
+</html>

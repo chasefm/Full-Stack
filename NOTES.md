@@ -14,3 +14,10 @@
 - 面试八股与公司技术栈保持一致：MyBatis-Plus（不教 JPA）、单体优先
 - 精力配比：Java 70% / 数据库与中间件 20% / 前端 10%
 - 教 Java 语言时善用 TS 对比法（用户有 React/TS 基础，迁移学习快）
+
+## 第二周决策（2026-11-13 grilling 确立）
+- 环境：IDEA Community 主 + Trae 保留；JDK 17（公司版本未确认，多版本共存备查已写入 0002）；本地 MySQL（root 密码用户自管）
+- 课程结构：0002 环境 → 0003 Java 语法速通 → 0004 图书 CRUD；语法速通全部完成后再动手（用户明确选择）
+- 语法边界：CRUD 最小集；Stream/Optional/lambda 到"能读懂"级；Lombok 三件套必教
+- 练手项目：图书管理单表 CRUD + React 页面；验收 = IDEA .http 自测清单全绿 + 代码规范 review
+- 八股线：第三/四周启动，本周不启动

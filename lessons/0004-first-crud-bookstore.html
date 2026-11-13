@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0004 · 第一个 CRUD：图书管理（全链路）</title>
+<link rel="stylesheet" href="../assets/course.css">
+<style>
+  .quiz { margin: 1.2em 0; }
+  .quiz .q-body { margin: 0 0 12px; font-weight: 600; }
+  .opts { display: grid; gap: 8px; }
+  .opt {
+    font: 15px var(--sans);
+    color: var(--text);
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .opt:hover { border-color: var(--brand); }
+  .opt.right { border-color: var(--ok); background: var(--brand-soft); }
+  .opt.wrong { border-color: var(--err); opacity: 0.75; }
+  .opt[disabled] { cursor: default; }
+  .explain { display: none; margin-top: 10px; font-size: 14px; color: var(--text-2); border-left: 3px solid var(--border); padding-left: 12px; }
+  .explain.show { display: block; }
+
+  .recall-q { position: relative; }
+  .recall-answer { display: none; margin-top: 8px; }
+  .recall-answer.show { display: block; }
+  .reveal-btn { font: 600 13px var(--sans); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; color: var(--text-2); cursor: pointer; }
+  .reveal-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  .checklist { list-style: none; padding-left: 0; margin: 1em 0; }
+  .checklist li { padding: 6px 0 6px 30px; position: relative; }
+  .checklist li::before {
+    content: "";
+    position: absolute; left: 0; top: 12px;
+    width: 16px; height: 16px;
+    border: 2px solid var(--text-3); border-radius: 4px;
+  }
+  .step-tag { display: inline-block; font: 700 12px var(--sans); color: #fff; background: var(--brand); border-radius: 6px; padding: 2px 10px; margin-right: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>第一个 CRUD：图书管理（全链路）</h1>
+  <div class="lesson-meta">课程 0004 · 第二周周末动手课 · 阅读约 25 分钟 + 动手 3-4 小时</div>
+
+  <div class="callout">
+    <span class="label">本课的胜利</span>
+    今天结束时你会拥有：一张真实的 MySQL 表、一个 5 接口的 Spring Boot 服务、一个连上它的 React 页面。这就是公司后端需求的最小完整闭环，也是你个人全栈项目的第一块砖。<strong>动手时卡住是常态，把报错贴进对话，卡点就是最好的教学素材。</strong>
+  </div>
+
+  <h2>今天的全链路</h2>
+  <p>把 0001 的地图变成自己搭的实景，从下往上建，每一步都验证：</p>
+<pre><code>MySQL 建表  →  生成 Spring Boot 项目  →  配置数据源
+→  Entity + Mapper + Service + Controller 四件套
+→  接口自测全绿  →  React 页面连上接口</code></pre>
+
+  <h2><span class="step-tag">Step 1</span>建库建表</h2>
+  <p>在 0002 课建好的 <code>demo</code> 库里执行（<code>book</code> 表如果已经建过就跳过，补一条即可）：</p>
+<pre><code>USE demo;
+
+CREATE TABLE IF NOT EXISTS book (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title      VARCHAR(100) NOT NULL COMMENT '书名',
+    author     VARCHAR(50)  NOT NULL COMMENT '作者',
+    status     TINYINT      NOT NULL DEFAULT 1 COMMENT '1上架 0下架',
+    created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+  <div class="callout">
+    <span class="label">前端视角</span>
+    这张表就是 TS 里的一个 <code>interface Book</code>——只是从「代码里声明形状」变成了「数据库里定义形状」。字段类型对应：BIGINT→Long、VARCHAR→String、TINYINT→Integer。表结构决定 Entity 的每个字段，两边不一致运行时就报错。
+  </div>
+
+  <h2><span class="step-tag">Step 2</span>生成 Spring Boot 项目</h2>
+  <p>打开 <a href="https://start.spring.io" target="_blank">start.spring.io</a>（IDEA 新建项目里选 Spring Initializr 也一样），按这个配置生成：</p>
+  <table>
+    <tr><th>配置项</th><th>填什么</th></tr>
+    <tr><td>Project</td><td>Maven</td></tr>
+    <tr><td>Language</td><td>Java</td></tr>
+    <tr><td>Spring Boot</td><td>默认稳定版（3.x）</td></tr>
+    <tr><td>Group / Artifact</td><td><code>com.demo</code> / <code>book-demo</code></td></tr>
+    <tr><td>JDK</td><td>17</td></tr>
+    <tr><td>Dependencies</td><td>Spring Web、Lombok、MySQL Driver</td></tr>
+  </table>
+  <p>GENERATE 下载解压，IDEA 打开，等 Maven 索引完成。然后手动加 MyBatis-Plus 依赖——打开 <code>pom.xml</code>，在 <code>&lt;dependencies&gt;</code> 里追加（注意：Spring Boot 3 必须用 <code>spring-boot3</code> 后缀的 starter）：</p>
+<pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.baomidou&lt;/groupId&gt;
+    &lt;artifactId&gt;mybatis-plus-spring-boot3-starter&lt;/artifactId&gt;
+    &lt;version&gt;3.5.7&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+  <p>改完 pom.xml 后，IDEA 右下角会弹出 Maven 刷新图标，点一下让它下载依赖。</p>
+
+  <h2><span class="step-tag">Step 3</span>配置数据源</h2>
+  <p>把 <code>src/main/resources/application.properties</code> 改名为 <code>application.yml</code>（公司项目几乎都用 yml），填入：</p>
+<pre><code>spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/demo?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 你的MySQL密码
+server:
+  port: 8080</code></pre>
+  <p>URL 里三个参数各有用途：<code>useSSL=false</code> 关掉本地不需要的加密握手；<code>serverTimezone=Asia/Shanghai</code> 防止时间字段差 8 小时；<code>allowPublicKeyRetrieval=true</code> 解决 MySQL 8 常见的连接报错。再加一个分页插件配置类——MyBatis-Plus 的分页必须靠它：</p>
+<pre><code>package com.demo.bookdemo.config;
+
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration                          // 配置类：往容器里注册 Bean
+public class MybatisPlusConfig {
+
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+        return interceptor;
+    }
+}</code></pre>
+
+  <h2><span class="step-tag">Step 4</span>四件套：Entity → Mapper → Service → Controller</h2>
+  <p>在 <code>com.demo.bookdemo</code> 包下依次建 <code>entity</code>、<code>mapper</code>、<code>service</code>、<code>controller</code> 四个子包（对照 0001 的地图）。</p>
+
+  <h3>① Entity：表的 Java 化身</h3>
+<pre><code>package com.demo.bookdemo.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+@Data                                              // Lombok：getter/setter/toString 全免
+@TableName("book")                                 // 对应哪张表
+public class Book {
+
+    @TableId(type = IdType.AUTO)                   // 主键，自增
+    private Long id;
+
+    private String title;
+    private String author;
+    private Integer status;
+}</code></pre>
+  <p>对照你的 TS 心智：<code>interface Book { id: number; title: string; author: string; status: 0 | 1 }</code>——只是 Java 里它是一个真类，且字段名默认与表列名一一对应（驼峰自动映射下划线：<code>createdAt</code> ↔ <code>created_at</code>）。</p>
+
+  <h3>② Mapper：一行代码白拿全套 CRUD</h3>
+<pre><code>package com.demo.bookdemo.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.demo.bookdemo.entity.Book;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface BookMapper extends BaseMapper&lt;Book&gt; {
+    // selectById / insert / updateById / deleteById / selectPage 全部免费
+}</code></pre>
+
+  <h3>③ Service：业务逻辑层</h3>
+  <p>先建统一返回结构 <code>common/Result.java</code>——公司接口的标准姿势（code + message + data）：</p>
+<pre><code>package com.demo.bookdemo.common;
+
+import lombok.Data;
+
+@Data
+public class Result&lt;T&gt; {
+    private int code;        // 0 成功，非 0 失败
+    private String message;
+    private T data;
+
+    public static &lt;T&gt; Result&lt;T&gt; ok(T data) {
+        Result&lt;T&gt; r = new Result&lt;&gt;();
+        r.code = 0;
+        r.message = "success";
+        r.data = data;
+        return r;
+    }
+
+    public static &lt;T&gt; Result&lt;T&gt; error(String msg) {
+        Result&lt;T&gt; r = new Result&lt;&gt;();
+        r.code = 1;
+        r.message = msg;
+        return r;
+    }
+}</code></pre>
+  <p>然后是 Service（直接单类，公司也有接口+Impl 风格，这里先用最简形式）：</p>
+<pre><code>package com.demo.bookdemo.service;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.demo.bookdemo.entity.Book;
+import com.demo.bookdemo.mapper.BookMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor                          // final 字段 → 构造器注入
+public class BookService {
+
+    private final BookMapper bookMapper;
+
+    public List&lt;Book&gt; list(long pageNo, long pageSize) {
+        Page&lt;Book&gt; page = bookMapper.selectPage(new Page&lt;&gt;(pageNo, pageSize), null);
+        return page.getRecords();                 // records = 当前页数据；分页信息在 page 本身
+    }
+
+    public Book getById(Long id) {
+        Book book = bookMapper.selectById(id);
+        if (book == null) {
+            throw new RuntimeException("图书不存在: " + id);   // 抛 unchecked，全局处理器接住
+        }
+        return book;
+    }
+
+    public void create(Book book) {
+        bookMapper.insert(book);                  // 插入后 book.id 会被自动回填
+    }
+
+    public void update(Long id, Book book) {
+        book.setId(id);
+        bookMapper.updateById(book);              // 只更新非 null 字段
+    }
+
+    public void delete(Long id) {
+        bookMapper.deleteById(id);
+    }
+}</code></pre>
+
+  <h3>④ Controller：接口层</h3>
+<pre><code>package com.demo.bookdemo.controller;
+
+import com.demo.bookdemo.common.Result;
+import com.demo.bookdemo.entity.Book;
+import com.demo.bookdemo.service.BookService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/books")
+@RequiredArgsConstructor
+public class BookController {
+
+    private final BookService bookService;
+
+    @GetMapping                                   // GET /api/books?page=1&size=10
+    public Result&lt;List&lt;Book&gt;&gt; list(@RequestParam(defaultValue = "1") long page,
+                                   @RequestParam(defaultValue = "10") long size) {
+        return Result.ok(bookService.list(page, size));
+    }
+
+    @GetMapping("/{id}")                          // GET /api/books/1
+    public Result&lt;Book&gt; getById(@PathVariable Long id) {
+        return Result.ok(bookService.getById(id));
+    }
+
+    @PostMapping                                  // POST /api/books
+    public Result&lt;Void&gt; create(@RequestBody Book book) {   // @RequestBody：JSON 体 → Book 对象
+        bookService.create(book);
+        return Result.ok(null);
+    }
+
+    @PutMapping("/{id}")                          // PUT /api/books/1
+    public Result&lt;Void&gt; update(@PathVariable Long id, @RequestBody Book book) {
+        bookService.update(id, book);
+        return Result.ok(null);
+    }
+
+    @DeleteMapping("/{id}")                       // DELETE /api/books/1
+    public Result&lt;Void&gt; delete(@PathVariable Long id) {
+        bookService.delete(id);
+        return Result.ok(null);
+    }
+}</code></pre>
+
+  <h2><span class="step-tag">Step 5</span>跑起来 + 自测清单</h2>
+  <p>点 <code>BookDemoApplication</code> 里的绿色 ▶ 启动，控制台看到 Spring 图标和 <code>Tomcat started on port 8080</code> 即成功。测试工具不用装——IDEA 自带 HTTP Client：在项目里新建 <code>api.http</code> 文件，粘贴下面的内容，<strong>每条请求点行首的绿色 ▶ 发送</strong>：</p>
+<pre><code>### ① 新增两本书
+POST http://localhost:8080/api/books
+Content-Type: application/json
+
+{"title": "深入理解Java虚拟机", "author": "周志明", "status": 1}
+
+###
+POST http://localhost:8080/api/books
+Content-Type: application/json
+
+{"title": "Java核心技术·卷I", "author": "Cay Horstmann", "status": 1}
+
+### ② 分页查询（应返回 2 条）
+GET http://localhost:8080/api/books?page=1&size=10
+
+### ③ 按 id 查（应返回第一本书）
+GET http://localhost:8080/api/books/1
+
+### ④ 更新（把 id=1 改成下架）
+PUT http://localhost:8080/api/books/1
+Content-Type: application/json
+
+{"status": 0}
+
+### ⑤ 删除 id=2
+DELETE http://localhost:8080/api/books/2
+
+### ⑥ 再查一次（应只剩 1 条且 status=0）
+GET http://localhost:8080/api/books</code></pre>
+  <div class="callout">
+    <span class="label">验收标准（全绿才算过）</span>
+    ① 新增返回 code=0，且响应里能看到回填的 id；② 分页返回正确条数；③ id 查询命中；④ PUT 后 status 变 0；⑤ DELETE 后条数减少；⑥ 全部符合预期。另外试一条 GET /api/books/999——应该看到 500 和「图书不存在」，这就是你抛的 RuntimeException 的效果。
+  </div>
+
+  <h2><span class="step-tag">Step 6</span>React 页面连上接口</h2>
+  <p>这步是你的主场，重点是<strong>对准接口形状</strong>：注意后端返回被 <code>Result</code> 包了一层，前端要解两次 <code>.data</code>（axios 的 data → Result 的 data）。新开一个 Vite React 项目（或直接在你任意练手前端里），替换 <code>App.jsx</code>：</p>
+<pre><code>import { useEffect, useState } from "react";
+
+const BASE = "http://localhost:8080/api/books";
+
+export default function App() {
+  const [books, setBooks] = useState([]);
+  const [form, setForm] = useState({ title: "", author: "" });
+
+  const load = async () => {
+    const res = await fetch(`${BASE}?page=1&size=10`);
+    const json = await res.json();        // json = { code, message, data }
+    setBooks(json.data);                  // Result 解包：data 里才是列表
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const add = async (e) => {
+    e.preventDefault();
+    await fetch(BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, status: 1 }),
+    });
+    setForm({ title: "", author: "" });
+    load();
+  };
+
+  const toggle = async (b) => {
+    await fetch(`${BASE}/${b.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: b.status === 1 ? 0 : 1 }),
+    });
+    load();
+  };
+
+  return (
+    &lt;div style={{ maxWidth: 560, margin: "40px auto", fontFamily: "sans-serif" }}&gt;
+      &lt;h2&gt;📚 图书管理&lt;/h2&gt;
+      &lt;form onSubmit={add} style={{ display: "flex", gap: 8, marginBottom: 16 }}&gt;
+        &lt;input value={form.title} required placeholder="书名"
+               onChange={(e) =&gt; setForm({ ...form, title: e.target.value })} /&gt;
+        &lt;input value={form.author} required placeholder="作者"
+               onChange={(e) =&gt; setForm({ ...form, author: e.target.value })} /&gt;
+        &lt;button&gt;新增&lt;/button&gt;
+      &lt;/form&gt;
+      &lt;ul&gt;
+        {books.map((b) =&gt; (
+          &lt;li key={b.id} style={{ display: "flex", gap: 8, alignItems: "center" }}&gt;
+            &lt;span style={{ flex: 1 }}&gt;
+              {b.title} · {b.author} · {b.status === 1 ? "上架" : "下架"}
+            &lt;/span&gt;
+            &lt;button onClick={() =&gt; toggle(b)}&gt;{b.status === 1 ? "下架" : "上架"}&lt;/button&gt;
+          &lt;/li&gt;
+        ))}
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+  <div class="callout">
+    <span class="label">跨域注意</span>
+    页面跑在 5173、接口跑在 8080，浏览器会拦截跨域请求。两个解法任选：Vite 里配 <code>server.proxy</code> 把 <code>/api</code> 转发到 8080（前端正规军做法）；或后端加一个 <code>@CrossOrigin</code> 注解在 Controller 上（后端解法，最快见效）。
+  </div>
+
+  <h2>常见报错速查</h2>
+  <table>
+    <tr><th>报错关键字</th><th>原因与解法</th></tr>
+    <tr><td><code>Access denied for user 'root'</code></td><td>yml 里密码不对，或没填你 0002 课设置的 root 密码</td></tr>
+    <tr><td><code>Public Key Retrieval is not allowed</code></td><td>URL 少了 <code>allowPublicKeyRetrieval=true</code></td></tr>
+    <tr><td><code>Table 'demo.book' doesn't exist</code></td><td>表没建，回 Step 1 执行 SQL</td></tr>
+    <tr><td><code>Port 8080 was already in use</code></td><td>端口被占，yml 里改 <code>server.port: 8081</code>（前端请求的 BASE 也要跟着改）</td></tr>
+    <tr><td>Getter/Setter 找不到、代码大面积红</td><td>Lombok 注解处理器没开（0002 课的解法）</td></tr>
+    <tr><td><code>Property 'mapper' or 'mybatis-plus'...</code> 启动失败</td><td>pom.xml 里 starter 用错了——Boot 3 必须 <code>mybatis-plus-spring-boot3-starter</code></td></tr>
+  </table>
+
+  <h2>练习场</h2>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 1 · <code>bookMapper.selectById(1)</code> 最终执行的 SQL 是？</p>
+    <div class="opts" data-mcq data-answer="1">
+      <button class="opt">SELECT * FROM book LIMIT 1</button>
+      <button class="opt">SELECT id,title,author,status FROM book WHERE id = 1</button>
+      <button class="opt">INSERT INTO book VALUES (1)</button>
+      <button class="opt">DELETE FROM book WHERE id = 1</button>
+    </div>
+    <p class="explain">解析：BaseMapper 按方法名 + Entity 注解自动生成 SQL：selectById → 按主键查全字段。这就是 MyBatis-Plus「白送 CRUD」的含义——你没有写一行 SQL，它替你写了。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 2 · 前端 fetch 拿到响应后，书单列表在哪个字段里？</p>
+    <div class="opts" data-mcq data-answer="2">
+      <button class="opt">res[0]</button>
+      <button class="opt">res.data[0]</button>
+      <button class="opt">（await res.json() 后的）json.data</button>
+      <button class="opt">res.body</button>
+    </div>
+    <p class="explain">解析：两层解包——HTTP 响应体先 json() 一次得到 Result 结构 {code, message, data}，列表在 data 里。以后你会看到公司前端全是 res.data.data 这种双解包，源头就是统一返回结构 Result&lt;T&gt;。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 3 · Service 里 <code>throw new RuntimeException("图书不存在")</code> 之后，谁接住了它？</p>
+    <div class="opts" data-mcq data-answer="0">
+      <button class="opt">Spring 全局异常处理器，包装成响应返回前端</button>
+      <button class="opt">MySQL 自动回滚事务时吞掉</button>
+      <button class="opt">Lombok 的 @Data 拦截</button>
+      <button class="opt">没人接，服务直接崩掉</button>
+    </div>
+    <p class="explain">解析：unchecked 异常沿调用栈向上冒泡，Spring 的异常处理机制统一接住转成 500 响应。真实项目里会有 @RestControllerAdvice 定制返回格式——这正是 0003 课讲的「公司代码很少 try/catch」的答案。</p>
+  </div>
+
+  <h2>凭回忆作答（不看上文）</h2>
+  <p style="font-size:14px;color:var(--text-3)">检索练习是记忆真正的来源——先在心里答完，再点开核对。</p>
+
+  <div class="card recall-q">
+    <p><strong>Q1</strong>：四件套各自的职责一句话概括？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">Entity 定数据形状（对应表）；Mapper 白拿 CRUD（BaseMapper）；Service 干业务活；Controller 接 HTTP 请求并统一 Result 返回。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q2</strong>：Spring Boot 3 配 MyBatis-Plus，starter 依赖叫什么名字？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">com.baomidou:mybatis-plus-spring-boot3-starter（带 spring-boot3 后缀；不带的是给 Boot 2 用的）。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q3</strong>：接口统一返回 Result&lt;T&gt;（code/message/data）对前端有什么好处？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">前端可以写统一的响应拦截器：code 非 0 就报错提示，为 0 就解包 data——不用每个接口各自处理错误形状。</p>
+  </div>
+
+  <h2>主资源 · 课后小任务</h2>
+  <p>遇到用法问题时查权威文档：<a href="https://baomidou.com/" target="_blank">MyBatis-Plus 官方文档</a>（重点看「CRUD 接口」和「分页插件」两节）。</p>
+  <div class="callout">
+    <span class="label">验收（这周最重要的一步）</span>
+    自测清单全绿 + React 页面能增能查之后，把 <strong>Book、BookMapper、BookService、BookController、Result、MybatisPlusConfig 六个文件</strong>贴进对话，我做一次代码规范 review（不是功能 review）——第一份 Java 代码就建立规范基线，比以后纠正便宜得多。review 结果会记入你的学习档案。
+  </div>
+
+  <footer>
+    卡住了？把报错完整贴进对话——报错原文是最好的素材。<br>
+    第三周预告 · 阶段 1 启动：Java 深入（面向对象 / 集合 / 异常体系）+ 面试八股线正式开跑；期间若接到真实工作需求，定向 lesson 随时插队。<br>
+    <a href="./0003-java-syntax-sprint.html">← 复习 0003：Java 语法速通</a>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  document.querySelectorAll('[data-mcq]').forEach((quiz) => {
+    const opts = [...quiz.querySelectorAll('.opt')];
+    const explain = quiz.querySelector('.explain');
+    const answer = Number(quiz.dataset.answer);
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach((o) => { o.disabled = true; });
+        opts[answer].classList.add('right');
+        if (i !== answer) opt.classList.add('wrong');
+        else explain.style.borderColor = 'var(--ok)';
+        explain.classList.add('show');
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-reveal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const answer = btn.parentElement.querySelector('.recall-answer');
+      answer.classList.toggle('show');
+      btn.textContent = answer.classList.contains('show') ? '收起答案' : '显示答案';
+    });
+  });
+})();
+</script>
+</body>
+</html>

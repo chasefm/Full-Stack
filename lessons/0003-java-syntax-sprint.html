@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0003 · Java 语法速通（写给 TS 开发者）</title>
+<link rel="stylesheet" href="../assets/course.css">
+<style>
+  .quiz { margin: 1.2em 0; }
+  .quiz .q-body { margin: 0 0 12px; font-weight: 600; }
+  .opts { display: grid; gap: 8px; }
+  .opt {
+    font: 15px var(--sans);
+    color: var(--text);
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .opt:hover { border-color: var(--brand); }
+  .opt.right { border-color: var(--ok); background: var(--brand-soft); }
+  .opt.wrong { border-color: var(--err); opacity: 0.75; }
+  .opt[disabled] { cursor: default; }
+  .explain { display: none; margin-top: 10px; font-size: 14px; color: var(--text-2); border-left: 3px solid var(--border); padding-left: 12px; }
+  .explain.show { display: block; }
+
+  .recall-q { position: relative; }
+  .recall-answer { display: none; margin-top: 8px; }
+  .recall-answer.show { display: block; }
+  .reveal-btn { font: 600 13px var(--sans); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; color: var(--text-2); cursor: pointer; }
+  .reveal-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1em 0; }
+  @media (max-width: 640px) { .compare { grid-template-columns: 1fr; } }
+  .compare > div { min-width: 0; }
+  .compare .side-label { font-size: 12px; font-weight: 600; color: var(--text-3); letter-spacing: 1px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Java 语法速通：写给 TS 开发者</h1>
+  <div class="lesson-meta">课程 0003 · 第二周 · 约 35 分钟 · 配套速查表：<a href="../reference/java-for-ts-devs.html">TS ↔ Java 对照表</a> · 下一课：<a href="./0004-first-crud-bookstore.html">第一个 CRUD</a></div>
+
+  <div class="callout">
+    <span class="label">本课的胜利</span>
+    读完这课，你能<strong>逐行读懂</strong>公司项目的 Controller 和 Service，并且不会在 <code>==</code> vs <code>equals</code>、整数除法、checked 异常这三个经典坑上摔跤。<strong>写</strong>代码留到 0004 动手课——今天目标是「读懂 + 认脸」。
+  </div>
+
+  <h2>心法：你不是在学新语言，是在学新方言</h2>
+  <p>TS 和 Java 都是静态类型的 C 系语言。先建立全局映射，再逐个击破：</p>
+  <table>
+    <tr><th>你熟悉的 TS</th><th>Java 里的对应</th><th>关键差异</th></tr>
+    <tr><td><code>const title: string</code></td><td><code>String title</code> / <code>final String</code></td><td>类型写前面；Java 的 <code>String</code> 首字母大写（它是对象不是原始值）</td></tr>
+    <tr><td><code>interface Book { ... }</code></td><td><code>class Book { ... }</code> 或 <code>interface</code></td><td>Java 的接口必须被显式 <code>implements</code>（名义类型），不是形状检查</td></tr>
+    <tr><td><code>Array&lt;Book&gt;</code></td><td><code>List&lt;Book&gt;</code></td><td>Java 数组（<code>Book[]</code>）长度固定，日常用 List</td></tr>
+    <tr><td><code>Record&lt;string, X&gt;</code></td><td><code>Map&lt;String, X&gt;</code></td><td>同理</td></tr>
+    <tr><td><code>null</code> / <code>undefined</code></td><td>只有 <code>null</code></td><td>没有 undefined；空指针是第一大运行时错误</td></tr>
+    <tr><td><code>export</code></td><td><code>public</code> + 包路径</td><td>导出由「修饰符 + 文件目录结构」决定</td></tr>
+    <tr><td><code>npm install</code></td><td>Maven（IDEA 自动）</td><td>依赖写在 <code>pom.xml</code></td></tr>
+  </table>
+
+  <h2>变量与基本类型</h2>
+<pre><code>int age = 25;                 // 整数（约 ±21 亿）
+long id = 1L;                 // 长整数，字面量带 L；数据库主键用它
+double price = 9.9;           // 小数
+boolean active = true;        // 注意不是 boolean 小写问题：就是 boolean
+String name = "周志明";        // 字符串，首字母大写，是对象
+
+final String city = "杭州";   // final ≈ TS 的 const，赋值后不可变
+var count = 10;               // Java 10+ 的局部类型推断，≈ TS 自动推断</code></pre>
+  <div class="callout">
+    <span class="label">第一个坑：整数除法</span>
+    <code>5 / 2</code> 在 TS 里是 <code>2.5</code>，在 Java 里是 <code>2</code>——两个 int 相除<strong>结果还是 int，直接截断</strong>。要小数就先把一边变成 double：<code>5.0 / 2</code>。数据库里存金额永远不用 double（用 BigDecimal），这会是面试考点。
+  </div>
+
+  <h2>String：头号坑在这里</h2>
+  <p><strong>Java 里比较字符串内容必须用 <code>equals</code>，不能用 <code>==</code></strong>。<code>==</code> 比较的是引用（是不是同一个对象），不是内容：</p>
+<pre><code>String a = "hello";
+String b = new String("hello");
+
+a == b          // false！引用不同
+a.equals(b)     // true ✓ 内容相同</code></pre>
+  <p>为什么 TS 没有这个问题？因为 JS 字符串是原始值，<code>===</code> 就比内容。Java 的 String 是对象，所以有了这个坑。日常记死一条：<strong>比字符串内容，永远写 <code>equals</code></strong>。</p>
+  <p>常用方法对照（几乎都能找到 JS 的影子）：</p>
+  <table>
+    <tr><th>Java</th><th>JS 里的你</th></tr>
+    <tr><td><code>s.length()</code></td><td><code>s.length</code></td></tr>
+    <tr><td><code>s.substring(0, 3)</code></td><td>相同</td></tr>
+    <tr><td><code>s.split(",")</code></td><td>相同</td></tr>
+    <tr><td><code>s.contains("x")</code></td><td><code>s.includes("x")</code></td></tr>
+    <tr><td><code>s.replace("a", "b")</code></td><td>相同（注意 Java 的 replaceAll 才是正则）</td></tr>
+    <tr><td><code>s.trim()</code></td><td>相同（Java 11+ 还有 <code>strip()</code>）</td></tr>
+    <tr><td><code>String.format("你好，%s", name)</code></td><td>`` 模板字符串 `` `你好，${name}` ``</td></tr>
+    <tr><td><code>"a" + 1</code> 拼接</td><td>相同，<code>+</code> 都能拼</td></tr>
+  </table>
+
+  <h2>类与方法：并排看一眼</h2>
+  <div class="compare">
+    <div>
+      <div class="side-label">TypeScript</div>
+<pre><code>class Book {
+  private title: string;
+
+  constructor(title: string) {
+    this.title = title;
+  }
+
+  getTitle(): string {
+    return this.title;
+  }
+}</code></pre>
+    </div>
+    <div>
+      <div class="side-label">Java</div>
+<pre><code>public class Book {
+    private String title;
+
+    public Book(String title) {
+        this.title = title;
+    }
+
+    public String getTitle() {
+        return this.title;
+    }
+}</code></pre>
+    </div>
+  </div>
+  <p>结构几乎一样，只多了四个高频修饰符：</p>
+  <table>
+    <tr><th>修饰符</th><th>含义</th><th>速记</th></tr>
+    <tr><td><code>public</code></td><td>谁都能访问</td><td>≈ TS 的 export 语义</td></tr>
+    <tr><td><code>private</code></td><td>只有本类能访问</td><td>和 TS private 意思相同，但 Java 是真·访问控制</td></tr>
+    <tr><td><code>void</code></td><td>方法不返回值</td><td>≈ 返回类型标注为 void</td></tr>
+    <tr><td><code>static</code></td><td>属于类而非实例</td><td>和 TS/JS 的 static 相同</td></tr>
+  </table>
+  <p>还有一个 TS 没有的概念：<strong>方法重载（overload）</strong>——同名方法可以有多个，靠参数列表区分。看到同名不同参的两个方法，不是重复代码，是重载。</p>
+
+  <h2>POJO + Lombok：公司代码里 90% 的类长这样</h2>
+  <p>Java 没有 TS 那种「对象字面量直接当数据用」的写法——<strong>数据必须装进类里</strong>。这种纯数据类叫 POJO，正规写法要给每个字段手写 getter/setter：</p>
+<pre><code>public class Book {
+    private Long id;
+    private String title;
+    private String author;
+    private Integer status;
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    // ... id、author、status 还各要一对，共 8 个方法
+}</code></pre>
+  <p>没人真手写这些。<strong>Lombok 一个注解全搞定</strong>——这就是你在公司代码里见到的样子：</p>
+<pre><code>@Data                          // 编译期自动生成全部 getter/setter/toString/equals
+public class Book {
+    private Long id;
+    private String title;
+    private String author;
+    private Integer status;
+}</code></pre>
+  <div class="callout">
+    <span class="label">Lombok 三件套（公司代码必见）</span>
+    ① <code>@Data</code>：数据类的全部样板代码；② <code>@Slf4j</code>：给类注入一个 <code>log</code> 对象，直接 <code>log.info("xxx")</code> 打日志；③ <code>@RequiredArgsConstructor</code>：给所有 <code>final</code> 字段生成构造器——配合 Spring 的依赖注入（0001 见过的 <code>@Autowired</code> 的现代替代写法）。
+  </div>
+
+  <h2>接口：名义类型，这是最大的心智差异</h2>
+  <p>TS 的 interface 是<strong>结构化类型</strong>——长得像就行。Java 的 interface 是<strong>名义类型</strong>——必须显式声明 <code>implements</code>，Java 不认「鸭子类型」：</p>
+<pre><code>public interface BookService {
+    Book getById(Long id);
+}
+
+// 必须写 implements，写了才有关系，长得像没用
+@Service
+public class BookServiceImpl implements BookService {
+    @Override
+    public Book getById(Long id) { return bookMapper.selectById(id); }
+}</code></pre>
+  <p>所以公司项目里 <code>XxxService</code> 接口 + <code>XxxServiceImpl</code> 实现类成对出现是标准操作。另外注意 0001 的 Mapper：<code>interface BookMapper extends BaseMapper&lt;Book&gt;</code>——接口继承接口用 <code>extends</code>，类实现接口用 <code>implements</code>。<code>@Override</code> 注解表示「我正在实现/覆盖父类方法」，写错方法名它会报错帮你兜底。</p>
+
+  <h2>集合：List 和 Map</h2>
+  <table>
+    <tr><th>你想要的</th><th>JS 写法</th><th>Java 写法</th></tr>
+    <tr><td>有序列表</td><td><code>const books: Book[]</code></td><td><code>List&lt;Book&gt; books = new ArrayList&lt;&gt;();</code></td></tr>
+    <tr><td>键值对</td><td><code>Record&lt;string, Book&gt;</code></td><td><code>Map&lt;String, Book&gt; map = new HashMap&lt;&gt;();</code></td></tr>
+  </table>
+  <p>API 对照（左边 Java，右边 JS）：</p>
+  <table>
+    <tr><th>操作</th><th>Java List</th><th>JS Array</th></tr>
+    <tr><td>加一个</td><td><code>list.add(book)</code></td><td><code>arr.push(book)</code></td></tr>
+    <tr><td>取第 i 个</td><td><code>list.get(0)</code></td><td><code>arr[0]</code></td></tr>
+    <tr><td>长度</td><td><code>list.size()</code></td><td><code>arr.length</code></td></tr>
+    <tr><td>遍历</td><td><code>for (Book b : list) { ... }</code></td><td><code>for (const b of arr) { ... }</code></td></tr>
+    <tr><td>Map 取值</td><td><code>map.get("key")</code></td><td><code>obj["key"]</code></td></tr>
+    <tr><td>Map 放值</td><td><code>map.put("key", book)</code></td><td><code>obj["key"] = book</code></td></tr>
+  </table>
+  <p>注意 Java 的 <code>Map.get("不存在的key")</code> 返回 <code>null</code> 而不是 undefined——判空逻辑接下来在异常/null 一节说。</p>
+
+  <h2>泛型：你已经会了 90%</h2>
+  <p><code>List&lt;Book&gt;</code> 的尖括号和 <code>Array&lt;Book&gt;</code> 一模一样，编译期检查类型。唯一日常注意点：尖括号里只能装<strong>对象类型</strong>，不能装原始类型——<code>List&lt;int&gt;</code> 不合法，要写 <code>List&lt;Integer&gt;</code>（Integer 是 int 的包装类，数据库查出来的 id 是 <code>Long</code> 也是同理）。<code>Integer</code>/<code>Long</code> 可以为 <code>null</code>，所以「数据库字段是 NULL」在 Java 里就是「包装类对象是 null」。</p>
+
+  <h2>异常：TS 没有的概念 —— checked 异常</h2>
+  <p>语法上 try/catch/finally 和 JS 几乎一样，但 Java 有一个 JS 完全没有的划分：</p>
+  <table>
+    <tr><th>类别</th><th>代表</th><th>规则</th></tr>
+    <tr><td><strong>unchecked</strong>（RuntimeException 及其子类）</td><td>NullPointerException、IllegalArgumentException</td><td>不用声明，随便抛——TS 心智模型</td></tr>
+    <tr><td><strong>checked</strong>（其它 Exception）</td><td>IOException、SQLException</td><td>编译器强制：要么 <code>try-catch</code>，要么方法签名声明 <code>throws</code></td></tr>
+  </table>
+<pre><code>// checked 异常的两种合法处理，二选一，不写编译不过：
+public Book read(Long id) throws IOException { ... }   // ① 声明「我不处理，往上抛」
+
+public Book read2(Long id) {                            // ② 现场处理
+    try {
+        ...
+    } catch (IOException e) {
+        log.error("读文件失败", e);
+        throw new RuntimeException(e);                  // 包装成 unchecked 继续抛也常见
+    }
+}</code></pre>
+  <div class="callout">
+    <span class="label">为什么公司代码里很少看到 try/catch</span>
+    不是没有异常，是<strong>被统一处理了</strong>：Service 层直接 <code>throw new RuntimeException("库存不足")</code>，一个全局异常处理器（<code>@RestControllerAdvice</code>）统一接住、包装成统一 JSON 返回。读懂这个套路，你就懂了 80% 的公司异常风格。
+  </div>
+
+  <h2>注解：长得像装饰器，机制完全不同</h2>
+  <p>TS 装饰器是<strong>函数，会改行为</strong>；Java 注解只是<strong>贴在代码上的标签</strong>，本身什么都不做——是 Spring 这类框架在启动时扫描标签、再决定装配什么。所以别问「这个注解是怎么实现的」，先问「哪个框架在读它」。</p>
+  <table>
+    <tr><th>你会在公司代码看到的</th><th>人话</th></tr>
+    <tr><td><code>@Override</code></td><td>编译器检查：这确实是在覆盖父类方法</td></tr>
+    <tr><td><code>@Data</code> / <code>@Slf4j</code></td><td>Lombok：生成样板代码（编译期处理，唯一「做事」的注解）</td></tr>
+    <tr><td><code>@RestController</code> / <code>@Service</code></td><td>Spring：把这个类注册进容器</td></tr>
+    <tr><td><code>@GetMapping</code> / <code>@PostMapping</code></td><td>Spring：把 URL 绑定到方法</td></tr>
+    <tr><td><code>@Autowired</code> / <code>@Resource</code></td><td>Spring：把依赖塞进来（或配合 @RequiredArgsConstructor 走构造器注入）</td></tr>
+    <tr><td><code>@TableName("book")</code></td><td>MyBatis-Plus：这个类对应哪张表</td></tr>
+  </table>
+
+  <h2>能读懂级：lambda、Stream、Optional</h2>
+  <p>不强求会写，但公司代码里一定会遇到，目标是<strong>看到不慌</strong>：</p>
+
+  <h3>lambda ≈ 箭头函数</h3>
+  <div class="compare">
+    <div>
+      <div class="side-label">JS</div>
+<pre><code>const f = (a, b) => a + b;
+book => book.title</code></pre>
+    </div>
+    <div>
+      <div class="side-label">Java</div>
+<pre><code>// -> 代替 =>
+Function<Integer, Integer> f = a -> a * 2;
+book -> book.getTitle()</code></pre>
+    </div>
+  </div>
+
+  <h3>Stream ≈ filter/map/reduce 链</h3>
+<pre><code>// JS:  books.filter(b => b.status === 1).map(b => b.title)
+List&lt;String&gt; names = books.stream()
+        .filter(b -&gt; b.getStatus() == 1)
+        .map(Book::getTitle)            // Book::getTitle ≈ b => b.getTitle()（方法引用）
+        .collect(Collectors.toList());  // 结尾要收一次，这是 JS 没有的仪式感</code></pre>
+
+  <h3>Optional ≈ null 安全链</h3>
+<pre><code>// TS:  user?.nickname ?? "匿名"
+String nickname = Optional.ofNullable(user)
+        .map(User::getNickname)
+        .orElse("匿名");</code></pre>
+  <div class="callout">
+    <span class="label">读懂优先</span>
+    这三样是「看得懂、必要时能照猫画虎」即可。会在实战里反复见到，自然会写，不用提前背。
+  </div>
+
+  <h2>实战阅读：把第 1 课的地图代码化</h2>
+  <p>现在你已经能逐行读懂它了——这就是公司项目一个典型接口的完整样子：</p>
+<pre><code>@RestController                          // 0001 讲过：路由模块
+@RequestMapping("/api/books")            // 这个类下所有接口的 URL 前缀
+@RequiredArgsConstructor                 // Lombok：给 final 字段生成构造器 → 构造器注入
+public class BookController {
+
+    private final BookService bookService;   // final + 构造器注入 ≈ @Autowired，但更推荐
+
+    @GetMapping("/{id}")                     // GET /api/books/1 走这个方法
+    public Book getById(@PathVariable Long id) {   // @PathVariable：URL 里的 {id} 填进参数
+        return bookService.getById(id);      // 委托给业务层
+    }
+}
+
+@Service
+@RequiredArgsConstructor
+public class BookServiceImpl implements BookService {
+
+    private final BookMapper bookMapper;     // 0001 讲过：BaseMapper 白送 CRUD
+
+    @Override
+    public Book getById(Long id) {
+        Book book = bookMapper.selectById(id);       // 生成 SQL 查库
+        if (book == null) {                          // 没查到 → 抛业务异常，全局处理器接住
+            throw new RuntimeException("图书不存在: " + id);
+        }
+        return book;
+    }
+}</code></pre>
+  <p>逐行问自己：每个注解什么意思？<code>private final</code> 为什么？哪里在抛 unchecked 异常？都答得上来，这课的目标就达成了。</p>
+
+  <h2>练习场</h2>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 1 · 判断两个字符串变量内容是否相同，正确写法是？</p>
+    <div class="opts" data-mcq data-answer="1">
+      <button class="opt">s1 == s2</button>
+      <button class="opt">s1.equals(s2)</button>
+      <button class="opt">s1 === s2</button>
+      <button class="opt">s1.eq(s2)</button>
+    </div>
+    <p class="explain">解析：== 比较引用是否同一个对象，不比内容。Java 字符串是对象，比内容永远用 equals。=== 在 Java 里根本不存在。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 2 · Java 里 <code>System.out.println(5 / 2)</code> 输出什么？</p>
+    <div class="opts" data-mcq data-answer="2">
+      <button class="opt">2.5</button>
+      <button class="opt">3</button>
+      <button class="opt">2</button>
+      <button class="opt">编译报错</button>
+    </div>
+    <p class="explain">解析：两个 int 相除，结果还是 int，小数部分直接截断（不是四舍五入）。要 2.5 得写 5.0 / 2。这是前端转 Java 最容易摔的第一个算术坑。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 3 · 方法抛出 IOException（checked 异常）时，编译器要求什么？</p>
+    <div class="opts" data-mcq data-answer="3">
+      <button class="opt">什么都不用做，运行时自动处理</button>
+      <button class="opt">必须把方法改成 private</button>
+      <button class="opt">必须加 @Override 注解</button>
+      <button class="opt">调用方要么 try-catch，要么方法签名声明 throws IOException</button>
+    </div>
+    <p class="explain">解析：checked 异常是编译器强制的契约。RuntimeException（unchecked）则完全不用声明——公司代码里 throw new RuntimeException 满天飞就是这个原因。</p>
+  </div>
+
+  <div class="quiz" data-quiz>
+    <p class="q-body">练习 4 · 这段 Stream 等价于哪行 JS？<br><code>books.stream().filter(b -&gt; b.status == 1).map(Book::getTitle).collect(toList())</code></p>
+    <div class="opts" data-mcq data-answer="0">
+      <button class="opt">books.filter(b => b.status === 1).map(b => b.title)</button>
+      <button class="opt">books.map(b => b.title).filter(b => b.status === 1)</button>
+      <button class="opt">books.find(b => b.status === 1)</button>
+      <button class="opt">books.reduce((a, b) => a + b.title, "")</button>
+    </div>
+    <p class="explain">解析：先 filter 后 map，顺序和 JS 一致；Book::getTitle 是方法引用，等价于 b => b.getTitle()。唯一多的仪式感是结尾 collect 收集。</p>
+  </div>
+
+  <h2>凭回忆作答（不看上文）</h2>
+  <p style="font-size:14px;color:var(--text-3)">检索练习是记忆真正的来源——先在心里答完，再点开核对。</p>
+
+  <div class="card recall-q">
+    <p><strong>Q1</strong>：Lombok 三件套是哪三个注解，各自干什么？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">@Data 生成 getter/setter/toString/equals；@Slf4j 注入 log 对象打日志；@RequiredArgsConstructor 给 final 字段生成构造器（配合 Spring 构造器注入）。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q2</strong>：TS 的 interface 和 Java 的 interface 最大差异是什么？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">TS 是结构化类型（长得像就行）；Java 是名义类型，必须显式 implements 才有关系。所以公司项目里 Service 接口 + ServiceImpl 实现类成对出现。</p>
+  </div>
+
+  <div class="card recall-q">
+    <p><strong>Q3</strong>：公司代码很少写 try/catch，异常去哪了？</p>
+    <button class="reveal-btn" data-reveal>显示答案</button>
+    <p class="recall-answer">Service 层直接抛 RuntimeException，由全局异常处理器（@RestControllerAdvice）统一接住、包装成统一 JSON 返回给前端。</p>
+  </div>
+
+  <h2>主资源 · 课后小任务</h2>
+  <p>系统输入主线（选读，不要求通读）：<a href="https://javaguide.cn/java/basis/java-basic-questions-01.html" target="_blank">JavaGuide：Java 基础常见知识点</a>——把你今晚学过的概念用面试口径再过一遍，顺便提前熟悉八股的问法。</p>
+  <div class="callout">
+    <span class="label">实战任务</span>
+    回到公司项目，挑一个你见过的 Controller + ServiceImpl，用今天学的逐行标注：每个注解、每个 <code>private final</code>、每处异常抛出。标注完把「看不懂的行」贴回来，那就是 0004 课的定制素材。
+  </div>
+
+  <footer>
+    卡住了？随时回来问你的导师（AI 助手）。<br>
+    下一课预告 · 0004：第一个 CRUD——周末全链路动手，React 页面 + Spring Boot + MySQL 闭环。<br>
+    <a href="../reference/java-for-ts-devs.html">→ 打印版速查表：TS ↔ Java 对照表</a>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  document.querySelectorAll('[data-mcq]').forEach((quiz) => {
+    const opts = [...quiz.querySelectorAll('.opt')];
+    const explain = quiz.querySelector('.explain');
+    const answer = Number(quiz.dataset.answer);
+    let done = false;
+    opts.forEach((opt, i) => {
+      opt.addEventListener('click', () => {
+        if (done) return;
+        done = true;
+        opts.forEach((o) => { o.disabled = true; });
+        opts[answer].classList.add('right');
+        if (i !== answer) opt.classList.add('wrong');
+        else explain.style.borderColor = 'var(--ok)';
+        explain.classList.add('show');
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-reveal]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const answer = btn.parentElement.querySelector('.recall-answer');
+      answer.classList.toggle('show');
+      btn.textContent = answer.classList.contains('show') ? '收起答案' : '显示答案';
+    });
+  });
+})();
+</script>
+</body>
+</html>

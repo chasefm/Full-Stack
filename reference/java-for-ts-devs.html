@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TS ↔ Java 对照速查表</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<div class="page">
+
+  <h1>TS ↔ Java 对照速查表</h1>
+  <div class="lesson-meta">配套课程 0003 · 打印友好 · 遇到「这个用 Java 怎么写」先查这里</div>
+
+  <h2>变量与类型</h2>
+  <table>
+    <tr><th>TypeScript</th><th>Java</th><th>备注</th></tr>
+    <tr><td><code>const n: number</code></td><td><code>int n</code> / <code>long n</code> / <code>double n</code></td><td>整数分档：int（默认）/ long（大数带 L 后缀）</td></tr>
+    <tr><td><code>const s: string</code></td><td><code>String s</code></td><td>首字母大写，是对象不是原始值</td></tr>
+    <tr><td><code>const b: boolean</code></td><td><code>boolean b</code></td><td>相同</td></tr>
+    <tr><td><code>const</code></td><td><code>final</code></td><td>赋值后不可变</td></tr>
+    <tr><td>类型推断</td><td><code>var</code></td><td>仅局部变量，Java 10+</td></tr>
+    <tr><td><code>null</code> / <code>undefined</code></td><td><code>null</code></td><td>没有 undefined；包装类（Integer/Long）可为 null</td></tr>
+    <tr><td><code>5 / 2 === 2.5</code></td><td><code>5 / 2 == 2</code></td><td><strong>整数除法截断</strong>，要小数写 <code>5.0 / 2</code></td></tr>
+  </table>
+
+  <h2>字符串</h2>
+  <table>
+    <tr><th>用途</th><th>JS</th><th>Java</th></tr>
+    <tr><td>比内容</td><td><code>s1 === s2</code></td><td><strong><code>s1.equals(s2)</code></strong>（== 比的是引用）</td></tr>
+    <tr><td>长度</td><td><code>s.length</code></td><td><code>s.length()</code></td></tr>
+    <tr><td>包含</td><td><code>s.includes(x)</code></td><td><code>s.contains(x)</code></td></tr>
+    <tr><td>截取</td><td><code>s.slice(a, b)</code></td><td><code>s.substring(a, b)</code></td></tr>
+    <tr><td>切分</td><td><code>s.split(",")</code></td><td><code>s.split(",")</code></td></tr>
+    <tr><td>模板串</td><td><code>`你好 ${name}`</code></td><td><code>String.format("你好 %s", name)</code></td></tr>
+    <tr><td>拼接</td><td><code>a + b</code></td><td><code>a + b</code>（同）</td></tr>
+  </table>
+
+  <h2>集合</h2>
+  <table>
+    <tr><th>用途</th><th>JS</th><th>Java</th></tr>
+    <tr><td>有序列表</td><td><code>Array&lt;T&gt;</code></td><td><code>List&lt;T&gt;</code>（new ArrayList&lt;&gt;()）</td></tr>
+    <tr><td>键值对</td><td><code>Record&lt;K, V&gt;</code> / Map</td><td><code>Map&lt;K, V&gt;</code>（new HashMap&lt;&gt;()）</td></tr>
+    <tr><td>添加</td><td><code>arr.push(x)</code></td><td><code>list.add(x)</code> / <code>map.put(k, v)</code></td></tr>
+    <tr><td>取值</td><td><code>arr[i]</code> / <code>obj[k]</code></td><td><code>list.get(i)</code> / <code>map.get(k)</code></td></tr>
+    <tr><td>长度</td><td><code>arr.length</code></td><td><code>list.size()</code></td></tr>
+    <tr><td>遍历</td><td><code>for (const x of arr)</code></td><td><code>for (X x : list)</code></td></tr>
+    <tr><td>过滤映射</td><td><code>arr.filter().map()</code></td><td><code>list.stream().filter().map().collect(toList())</code></td></tr>
+    <tr><td>泛型约束</td><td><code>Array&lt;T&gt;</code> 任意类型</td><td>尖括号只能装对象：<code>List&lt;Integer&gt;</code> 不能写 <code>List&lt;int&gt;</code></td></tr>
+  </table>
+
+  <h2>类与接口</h2>
+  <table>
+    <tr><th>概念</th><th>TS</th><th>Java</th></tr>
+    <tr><td>类的可见性</td><td><code>public</code> / <code>private</code>（编译期）</td><td><code>public</code> / <code>private</code>（运行期真强制）</td></tr>
+    <tr><td>接口绑定</td><td>结构化类型：长得像就行</td><td>名义类型：必须显式 <code>implements</code></td></tr>
+    <tr><td>接口继承</td><td><code>extends</code></td><td>类实现接口 <code>implements</code>；接口继承接口 <code>extends</code></td></tr>
+    <tr><td>纯数据对象</td><td>对象字面量直接用</td><td>POJO 类 + Lombok <code>@Data</code></td></tr>
+    <tr><td>覆盖标记</td><td>无</td><td><code>@Override</code>（写错方法名会编译报错）</td></tr>
+    <tr><td>重载</td><td>无（可选参数/联合类型替代）</td><td>同名方法不同参数列表，合法且常见</td></tr>
+  </table>
+
+  <h2>Lombok 三件套</h2>
+  <table>
+    <tr><th>注解</th><th>生成什么</th><th>典型位置</th></tr>
+    <tr><td><code>@Data</code></td><td>getter/setter/toString/equals/hashCode</td><td>Entity / DTO 数据类</td></tr>
+    <tr><td><code>@Slf4j</code></td><td>日志对象 <code>log</code></td><td>任何要打日志的类</td></tr>
+    <tr><td><code>@RequiredArgsConstructor</code></td><td>final 字段的构造器（→ 构造器注入）</td><td>Service / Controller</td></tr>
+  </table>
+
+  <h2>异常</h2>
+  <table>
+    <tr><th>类别</th><th>代表</th><th>编译器要求</th></tr>
+    <tr><td>unchecked</td><td>RuntimeException 系列（NPE、IllegalArgument…）</td><td>无——业务代码随手 <code>throw new RuntimeException(msg)</code></td></tr>
+    <tr><td>checked</td><td>IOException、SQLException</td><td>强制 try-catch 或方法签名 <code>throws</code></td></tr>
+  </table>
+  <p>公司套路：Service 抛 unchecked → 全局异常处理器（<code>@RestControllerAdvice</code>）统一包装返回。所以很少见到 try/catch。</p>
+
+  <h2>注解速查（Spring / MyBatis-Plus）</h2>
+  <table>
+    <tr><th>注解</th><th>人话</th></tr>
+    <tr><td><code>@RestController</code> + <code>@RequestMapping("/api/x")</code></td><td>路由模块 + URL 前缀</td></tr>
+    <tr><td><code>@GetMapping / @PostMapping / @PutMapping / @DeleteMapping</code></td><td>URL 绑定到方法</td></tr>
+    <tr><td><code>@PathVariable</code> / <code>@RequestParam</code> / <code>@RequestBody</code></td><td>路径参数 / 查询参数 / JSON 请求体 → 对象</td></tr>
+    <tr><td><code>@Service</code> / <code>@Configuration</code> / <code>@Bean</code></td><td>把类/方法返回值注册进 Spring 容器</td></tr>
+    <tr><td><code>@Autowired</code> 或 构造器注入（推荐）</td><td>依赖注入，不用手动 new</td></tr>
+    <tr><td><code>@TableName("book")</code> / <code>@TableId(type = IdType.AUTO)</code></td><td>实体对应表名 / 主键自增</td></tr>
+    <tr><td><code>extends BaseMapper&lt;T&gt;</code></td><td>白拿全套单表 CRUD（selectById / insert / updateById / deleteById / selectPage）</td></tr>
+  </table>
+
+  <h2>lambda / Stream / Optional（读懂级）</h2>
+<pre><code>// 箭头函数：=> 变 ->
+x => x * 2                    ≙    x -&gt; x * 2
+x => x.title                  ≙    X::getTitle        （方法引用）
+
+// 链式处理：
+list.filter(f).map(m)         ≙    list.stream().filter(f).map(m).collect(Collectors.toList())
+
+// null 安全：
+x?.name ?? "默认"              ≙    Optional.ofNullable(x).map(X::getName).orElse("默认")</code></pre>
+
+  <h2>IDEA 加速 buff</h2>
+  <table>
+    <tr><th>缩写 / 快捷键</th><th>展开成</th></tr>
+    <tr><td><code>psvm</code> + Tab</td><td><code>public static void main(String[] args)</code></td></tr>
+    <tr><td><code>sout</code> + Tab</td><td><code>System.out.println()</code></td></tr>
+    <tr><td><code>fori</code> + Tab</td><td>标准 for 循环骨架</td></tr>
+    <tr><td>Alt + Enter</td><td>红色报错的「修复建议」（万能键）</td></tr>
+    <tr><td>Ctrl + B</td><td>跳转到定义（追踪调用链神器）</td></tr>
+  </table>
+
+  <footer>
+    <a href="../lessons/0003-java-syntax-sprint.html">← 返回课程 0003</a> ·
+    <a href="../lessons/0004-first-crud-bookstore.html">课程 0004：第一个 CRUD</a> ·
+    <a href="spring-boot-project-map.html">项目结构全景图</a>
+  </footer>
+
+</div>
+</body>
+</html>
