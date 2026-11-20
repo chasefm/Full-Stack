@@ -85,6 +85,19 @@
     <li>装完在开始菜单搜「MySQL 8.0 Command Line Client」能打开、输密码能进入 <code>mysql&gt;</code> 提示符，即成功</li>
   </div>
 
+  <h3>怎么打开 MySQL —— 三种门，任选其一</h3>
+  <table>
+    <tr><th>方式</th><th>怎么进</th><th>适合场景</th></tr>
+    <tr><td><strong>开始菜单客户端</strong></td><td>开始菜单搜「MySQL 8.0 Command Line Client」→ 窗口里直接输 root 密码（<strong>输入时不显示字符，输完回车即可</strong>）→ 出现 <code>mysql&gt;</code> 即进入</td><td>最省事，第一次就用它</td></tr>
+    <tr><td><strong>PowerShell</strong></td><td><code>mysql -u root -p</code> → 回车 → 提示 <code>Enter password:</code> 时输密码</td><td>需 MySQL 的 <code>bin</code> 目录在 PATH 里（安装时没配会报「不是内部或外部命令」）</td></tr>
+    <tr><td><strong>IDEA Database</strong></td><td>右侧 <code>Database</code> 面板 → <code>+</code> → <code>Data Source</code> → MySQL</td><td>0004 课配置数据源时会用，今天先不管</td></tr>
+  </table>
+  <p>进去之后所有命令都以<strong>分号 <code>;</code> 结尾</strong>（分号是「执行」的意思，少了它提示符会变成 <code>-&gt;</code> 等你继续敲）。退出用 <code>exit</code> 或 <code>quit</code>。</p>
+  <div class="callout">
+    <span class="label">连不上时先查服务</span>
+    报「Can't connect to MySQL server」多半是 MySQL 服务没启动。PowerShell <strong>以管理员身份</strong>执行 <code>net start MySQL80</code>（服务名也可能是 <code>MySQL</code>，可在「服务」里搜 MySQL 确认）；或 Win+R 输 <code>services.msc</code> → 找到 MySQL 服务 → 右键启动。
+  </div>
+
   <h2>验收三连（今晚的动手作业）</h2>
 
   <h3>① 跑起第一个 Java 程序</h3>
@@ -98,7 +111,7 @@
   <p>顺便感受一下类型声明：前端 <code>let msg = "hi"</code>，Java 是 <code>String msg = "hi";</code>——<strong>类型在前，语句带分号</strong>，语法速通课（0003）会系统讲。</p>
 
   <h3>② MySQL 建库建表</h3>
-  <p>打开 MySQL 命令行客户端，逐条执行：</p>
+  <p>用上面三种门的任意一种进入 <code>mysql&gt;</code> 提示符（推荐开始菜单的「MySQL 8.0 Command Line Client」），逐条执行——注意每条都以分号结尾：</p>
 <pre><code>CREATE DATABASE demo DEFAULT CHARACTER SET utf8mb4;
 USE demo;
 
@@ -113,6 +126,18 @@ CREATE TABLE book (
 INSERT INTO book (title, author) VALUES ('深入理解Java虚拟机', '周志明');
 SELECT * FROM book;</code></pre>
   <p>看到一行查询结果，即过关。这张 <code>book</code> 表就是 0004 动手课的主角，先替未来的自己铺路。</p>
+
+  <h3>常用命令小抄（进库后随手查）</h3>
+<pre><code>SHOW DATABASES;              -- 列出所有数据库
+USE demo;                    -- 切换到 demo 库
+SHOW TABLES;                 -- 看当前库里有哪些表
+DESC book;                   -- 看表结构（字段、类型、默认值）
+SELECT * FROM book;          -- 查全部数据
+INSERT INTO book (title, author) VALUES ('三体', '刘慈欣');
+UPDATE book SET status = 0 WHERE id = 1;
+SELECT id, title FROM book WHERE status = 1;
+EXIT;                        -- 退出 mysql&gt; 提示符</code></pre>
+  <p>遇到 <code>-&gt;</code> 提示符：说明上一条语句少了分号，补一个 <code>;</code> 回车即可；想放弃当前语句输入 <code>\c</code> 回车。</p>
 
   <h3>③（可选）终端验证</h3>
   <p>PowerShell 里执行 <code>java -version</code>，看到 <code>17.x.x</code> 即 JDK 配好了。看不到也没关系——IDEA 内部用自己的 JDK 路径，0004 课全部在 IDEA 里完成。</p>
